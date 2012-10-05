@@ -63,8 +63,21 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 		parameter.SaveParameterToFile(file_name); 
 	}
 	// run simulation
-	cout << "Simulation for " << parameter.simulation_length << " steps.\n"; 	
-	DispatchSimulation(nTasks, parameter, highest_level); 
+	cout << "Simulation for " << parameter.simulation_length << " steps.\n"; 
+	int total_length = parameter.simulation_length; 
+	int segment_length = 10000; 
+	int nSegment = total_length/segment_length; 
+	for (int i=0; i<nSegment; i++)
+	{
+		parameter.simulation_length =segment_length; 
+		DispatchSimulation(nTasks, parameter, highest_level); 
+	}
+	int rSegment = total_length%segment_length; 
+	if (rSegment)
+	{
+		parameter.simulation_length = rSegment; 
+		DispatchSimulation(nTasks, parameter, highest_level);
+	}
 		 
 	cout << "Done simulation" << endl; 
 

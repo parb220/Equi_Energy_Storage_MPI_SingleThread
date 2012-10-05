@@ -53,11 +53,10 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			CEES_Node *simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r);
 			if (status.MPI_TAG == 1)
 			{ // burn in; 
-				CSampleIDWeight mode;
-                        	target->GetMode(mode, 0);
-                        	simulator[energy_level].Initialize(mode);
+				parameter.SetCurrentState(r, energy_level); 
+                        	simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
 				
-				cout << energy_level << " ... Burn In" << endl;
+				// cout << energy_level << " ... Burn In" << endl;
 				simulator[energy_level].BurnIn(r, storage, simulation_length, parameter.multiple_try_mh);
 				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level);
 				int done=1; 
@@ -70,7 +69,7 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
                         	target->GetMode(mode, 0);
                         	simulator[energy_level].Initialize(mode);
 				
-				cout << energy_level << " ... Tune/Estimate MH Proposal Scales" << endl; 
+				// cout << energy_level << " ... Tune/Estimate MH Proposal Scales" << endl; 
 				simulator[energy_level].MH_StepSize_Tune(parameter.mh_tracking_length, parameter.mh_stepsize_tuning_max_time, r, parameter.multiple_try_mh);  
 			
 				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
@@ -79,15 +78,13 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 				MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD); 
 			}
 			else if (status.MPI_TAG == 3)
-			{
+			{ // tracking
 				// restore storage
-				if (energy_level < parameter.number_energy_level -1)
-					storage.restore(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1));
 				storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 
 				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target); 
 
-				cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 	
+				// cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 	
 				simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
 				
 				// finalize 
@@ -99,14 +96,12 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 				MPI_Send(sPackage, 2, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD); 
 			}
 			else if (status.MPI_TAG == 4)
-			{
+			{ // simulating
 				// restore storage
-				if (energy_level < parameter.number_energy_level -1)
-					storage.restore(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1));
 				storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 				
 				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target);
-				cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 
+				// cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 
                        		simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
 
 				// finalize storage
@@ -197,8 +192,9 @@ void InitializeSimulator(CEES_Node &simulator, int energy_level, CParameterPacka
         convert << parameter.run_id << "/" << parameter.run_id << ".current_state."  << energy_level;
         string filename = filename_base + convert.str();
         
-	if (!parameter.LoadCurrentStateFromFile(filename, energy_level))
-		parameter.LoadCurrentStateFromStorage(storage, r, energy_level);
+	//if (!parameter.LoadCurrentStateFromFile(filename, energy_level))
+	if (!parameter.LoadCurrentStateFromStorage(storage, r, energy_level)) 
+		parameter.LoadCurrentStateFromFile(filename, energy_level);
 	simulator.Initialize(parameter.GetCurrentState(energy_level));
 	return; 
 }

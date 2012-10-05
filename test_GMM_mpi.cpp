@@ -179,19 +179,6 @@ int main(int argc, char ** argv)
 	// Storage
 	CStorageHead storage(parameter.run_id, parameter.get_marker, parameter.put_marker, parameter.number_bins,storage_filename_base, my_rank);
 
-	/*/ Current state
-	if (if_resume)
-	{
-		convert.str(string()); 
-		convert << parameter.run_id << "/" << parameter.run_id << ".current_state." << my_rank; 
-		file_name = storage_filename_base + convert.str(); 
-		if (!parameter.LoadCurrentStateFromFile(file_name) && !parameter.LoadCurrentStateFromStorage(storage, r))
-			parameter.SetCurrentState(r); 
-	}
-	else 
-		parameter.SetCurrentState(r); */
-	
-	// master runs burn-in and tuning and simulation 
 	// slave runs simulation
 	if (my_rank == 0)
 		master_single_thread(storage_filename_base, storage, parameter, highest_level, if_resume, &target, r); 
