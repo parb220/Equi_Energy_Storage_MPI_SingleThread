@@ -90,20 +90,14 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			ParseReceivedMessage(rPackage, parameter.GetMHProposalScaleSize()+4, parameter, energy_level, simulation_length); 
 
                         CEES_Node *simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r);
-			int segment_length = simulation_length < 100000 ? simulation_length : 100000; 
-			while (segment_length > 0)
-			{
-				simulation_length -= 100000; 
-				storage.restore(); 
-				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target);
-				cout << energy_level << " ... Simulating for ... " << segment_length << " steps.\n"; 
-				// Simulation
-                        	simulator[energy_level].Simulate(r, storage, segment_length, parameter.deposit_frequency, parameter.multiple_try_mh);
+			storage.restore(); 
+			InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target);
+			cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 
+			// Simulation
+                       	simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
 
-				storage.finalize(); 
-				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
-				segment_length = simulation_length < 100000 ? simulation_length : 100000;
-			}
+			storage.finalize(); 
+			WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
 			delete [] simulator; 
 			// Send back message
 			int done = 1; 

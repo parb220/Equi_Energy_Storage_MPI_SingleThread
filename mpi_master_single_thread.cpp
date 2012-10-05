@@ -17,7 +17,7 @@ void RunSimulation(CParameterPackage &, int, int, CModel*, CStorageHead &, const
 
 void DispatchTuningTask(int nClusterNode, CParameterPackage &parameter);
 void DispatchTrackingTask(int nClusterNode, CParameterPackage &parameter); 
-void DispatchSimulation(int nClusterNode, const CParameterPackage &parameter); 
+void DispatchSimulation(int nClusterNode, const CParameterPackage &parameter, int highest_level); 
  
 void master_single_thread(string storage_filename_base, CStorageHead &storage, CParameterPackage &parameter, int highest_level, bool if_resume, CModel *target, const gsl_rng *r) 
 {	
@@ -62,7 +62,7 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 	}
 	// run simulation
 	cout << "Simulation for " << parameter.simulation_length << " steps.\n"; 	
-	DispatchSimulation(nTasks, parameter); 
+	DispatchSimulation(nTasks, parameter, highest_level); 
 		 
 	cout << "Done simulation" << endl; 
 
