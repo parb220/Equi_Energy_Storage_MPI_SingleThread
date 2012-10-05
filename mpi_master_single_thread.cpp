@@ -69,12 +69,14 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 	int nSegment = total_length/segment_length; 
 	for (int i=0; i<nSegment; i++)
 	{
+		storage.consolidate(); 
 		parameter.simulation_length =segment_length; 
 		DispatchSimulation(nTasks, parameter, highest_level); 
 	}
 	int rSegment = total_length%segment_length; 
 	if (rSegment)
 	{
+		storage.consolidate(); 
 		parameter.simulation_length = rSegment; 
 		DispatchSimulation(nTasks, parameter, highest_level);
 	}

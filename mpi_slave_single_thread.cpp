@@ -80,6 +80,8 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			else if (status.MPI_TAG == 3)
 			{ // tracking
 				// restore storage
+				if (energy_level < parameter.number_energy_level-1)
+					storage.RestoreForFetch(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1)); 
 				storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 
 				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target); 
@@ -98,6 +100,8 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			else if (status.MPI_TAG == 4)
 			{ // simulating
 				// restore storage
+				if (energy_level < parameter.number_energy_level-1)
+					storage.RestoreForFetch(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1)); 
 				storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 				
 				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target);
