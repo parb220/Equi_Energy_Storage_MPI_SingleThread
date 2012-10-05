@@ -15,7 +15,7 @@ SINGLE_CORE_VERSION_OBJS = $(SINGLE_CORE_VERSION_DIR)/CEES_Node.o $(SINGLE_CORE_
 
 all:  test_GMM_mpi
 
-test_GMM_mpi_obj = test_GMM_mpi.o mpi_master_single_thread.o  mpi_slave_single_thread.o DispatchTuningTask.o DispatchSimulationTask.o DispatchTrackingTask.o $(SINGLE_CORE_VERSION_OBJS) $(DISTR_MODEL_OBJS)
+test_GMM_mpi_obj = test_GMM_mpi.o mpi_master_single_thread.o  mpi_slave_single_thread.o DispatchBurnInTask.o DispatchTuningTask.o DispatchSimulationTask.o DispatchTrackingTask.o $(SINGLE_CORE_VERSION_OBJS) $(DISTR_MODEL_OBJS)
 
 test_GMM_mpi: $(test_GMM_mpi_obj)
 	$(MPICXX) $(CFLAGS) $(LIBS_DIR) $(LIBS) $(test_GMM_mpi_obj) -o test_GMM_mpi 
@@ -28,6 +28,9 @@ mpi_master_single_thread.o: mpi_master_single_thread.cpp
 
 mpi_slave_single_thread.o: mpi_slave_single_thread.cpp
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c mpi_slave_single_thread.cpp
+
+DispatchBurnInTask.o: DispatchBurnInTask.cpp
+	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchBurnInTask.cpp
 
 DispatchTuningTask.o: DispatchTuningTask.cpp
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchTuningTask.cpp

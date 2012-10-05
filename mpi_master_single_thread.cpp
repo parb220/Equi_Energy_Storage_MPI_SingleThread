@@ -15,6 +15,7 @@ using namespace std;
 
 void RunSimulation(CParameterPackage &, int, int, CModel*, CStorageHead &, const gsl_rng *); 
 
+void DispatchBurnInTask(int nClusterNode, const CParameterPackage &parameter); 
 void DispatchTuningTask(int nClusterNode, CParameterPackage &parameter);
 void DispatchTrackingTask(int nClusterNode, CParameterPackage &parameter); 
 void DispatchSimulation(int nClusterNode, const CParameterPackage &parameter, int highest_level); 
@@ -37,6 +38,7 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 			Tuning; 
 		}*/
 		cout << "Initialize, burn in, tune/estimate MH stepsize" << endl; 
+		DispatchBurnInTask(nTasks, parameter); 
 		DispatchTuningTask(nTasks, parameter); 
 		// scale for proposl distribution should be updated
 		int nEnergyLevelTuning = 0;

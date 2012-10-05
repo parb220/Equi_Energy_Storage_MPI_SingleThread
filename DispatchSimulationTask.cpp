@@ -28,10 +28,10 @@ void DispatchSimulation(int nTasks, const CParameterPackage &parameter, int high
 		{
 			sPackage[1] = (double)((rank-1)%(highest_level+1)); 
 			parameter.GetMHProposalScale((int)(sPackage[1]), sPackage+4, parameter.GetMHProposalScaleSize());
-			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 3, MPI_COMM_WORLD);
+			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 4, MPI_COMM_WORLD);
 		}
 		for (int rank=1; rank<nTasks; rank++)
-			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status);
+			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 4, MPI_COMM_WORLD, &status);
 	}
 	else 
 	{	/* need to recycle using slave_nodes */
@@ -41,19 +41,19 @@ void DispatchSimulation(int nTasks, const CParameterPackage &parameter, int high
 		{
 			sPackage[1] = (double)(level); 
 			parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize());
-			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 3, MPI_COMM_WORLD); 
+			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 4, MPI_COMM_WORLD); 
 			send_receive[rank] = true; 
 			level --; 
 		} 
 		while (level >= 0)
 		{
-			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
+			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 4, MPI_COMM_WORLD, &status); 
 			rank = status.MPI_SOURCE; 
 			send_receive[rank] = false; 
 
 			sPackage[1] = (double)(level); 
 			parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize());
-			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 3, MPI_COMM_WORLD);
+			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 4, MPI_COMM_WORLD);
 			send_receive[rank] = true; 
 
 			level --; 
@@ -61,7 +61,7 @@ void DispatchSimulation(int nTasks, const CParameterPackage &parameter, int high
 		for (int rank=1; rank<nTasks; rank++)
 		{
 			if (send_receive[rank])
-				MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status);
+				MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 4, MPI_COMM_WORLD, &status);
 		}
 	}
 

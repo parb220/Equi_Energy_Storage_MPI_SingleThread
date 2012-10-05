@@ -33,11 +33,11 @@ void DispatchTrackingTask(int nTasks, CParameterPackage &parameter)
 			sPackage[2] = h0; 
 			sPackage[3] = hk_1; 
 			parameter.GetMHProposalScale((int)(sPackage[1]), sPackage+4, parameter.GetMHProposalScaleSize()); 
-			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 2, MPI_COMM_WORLD);  
+			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 3, MPI_COMM_WORLD);  
 		}
 		for (int rank=1; rank<nTasks; rank++)
 		{
-			MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status); 
+			MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
 			h0 = h0 < rPackage[0] ? h0 : rPackage[0]; 
 			hk_1 = hk_1 > rPackage[1] ? hk_1 : rPackage[1]; 
 		}
@@ -51,24 +51,23 @@ void DispatchTrackingTask(int nTasks, CParameterPackage &parameter)
 			sPackage[2] = h0; 
 			sPackage[3] = hk_1; 
 			parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize());
-			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 2, MPI_COMM_WORLD); 
+			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 3, MPI_COMM_WORLD); 
 			send_receive[rank] = true; 
 			level --; 
 		}	
 		while (level >= 0)
 		{
-			MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status); 
+			MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
 			rank = status.MPI_SOURCE; 
 			send_receive[rank] = false; 
 
 			h0 = h0 < rPackage[0] ? h0 : rPackage[0]; 
                         hk_1 = hk_1 > rPackage[1] ? hk_1 : rPackage[1];
-\			
 			sPackage[1] = (double)(level);    // energy level
 			sPackage[2] = h0; 
 			sPackage[3] = hk_1; 
 			parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize());
-                        MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 2, MPI_COMM_WORLD);
+                        MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 3, MPI_COMM_WORLD);
 			send_receive[rank] = true; 
                         level --;
 		}
@@ -76,7 +75,7 @@ void DispatchTrackingTask(int nTasks, CParameterPackage &parameter)
 		{
 			if (send_receive[rank])
 			{
-				MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status); 
+				MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
 				h0 = h0 < rPackage[0] ? h0 : rPackage[0]; 
 				hk_1 = hk_1 > rPackage[1] ? hk_1 : rPackage[1]; 
 			} 	

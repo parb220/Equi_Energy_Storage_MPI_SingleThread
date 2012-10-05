@@ -14,6 +14,14 @@
 
 using namespace std;
 
+/* MPI_TAG: 
+ 0: exit
+ 1: burn-in 
+ 2: tuning
+ 3: tracking
+ 4: simulation
+*/
+
 void WrapUpSimulation(CParameterPackage &parameter, const CEES_Node &simulator, string filename_base, int energy_level); 
 
 void InitializeSimulator(CEES_Node &, int energy_level, CParameterPackage &parameter, string filename_base, CStorageHead &storage, const gsl_rng *r, CModel *target);
@@ -39,69 +47,76 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 	while (1)
 	{
 		MPI_Recv(rPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, 0, MPI_ANY_TAG, MPI_COMM_WORLD, &status); 
-		if (status.MPI_TAG == 1)
-		{ // tuning scale	
-			ParseReceivedMessage(rPackage, parameter.GetMHProposalScaleSize()+4, parameter, energy_level, simulation_length); 
-
-			CEES_Node *simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r); 
-			
-			// Always start with mode for tuning scales
-			CSampleIDWeight mode; 
-			target->GetMode(mode, 0); 
-			simulator[energy_level].Initialize(mode); 	
-		
-			// Tuning
-			cout << energy_level << " ... Burn In" << endl; 
-			simulator[energy_level].BurnIn(r, storage, parameter.burn_in_period, parameter.multiple_try_mh); 
-			cout << energy_level << " ... Tune/Estimate MH Proposal Scales" << endl; 
-			simulator[energy_level].MH_StepSize_Tune(parameter.mh_tracking_length, parameter.mh_stepsize_tuning_max_time, r, parameter.multiple_try_mh);  
-			
-			WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level);
-			// Send back messages
-			sPackage[0] = (double)(energy_level);
-			parameter.GetMHProposalScale(energy_level, sPackage+1, parameter.GetMHProposalScaleSize());
-			delete [] simulator; 
-			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD); 
-		}
-		else if (status.MPI_TAG == 2)
-		{ // tracking
+		if (status.MPI_TAG > 0)
+		{
 			ParseReceivedMessage(rPackage, parameter.GetMHProposalScaleSize()+4, parameter, energy_level, simulation_length);
-                        
 			CEES_Node *simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r);
-		
-			storage.restore(); 
-
-			InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target); 
-
-			cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 	
-			// Simulation
-			simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
-
-			storage.finalize(); 
-			WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
+			if (status.MPI_TAG == 1)
+			{ // burn in; 
+				CSampleIDWeight mode;
+                        	target->GetMode(mode, 0);
+                        	simulator[energy_level].Initialize(mode);
+				
+				cout << energy_level << " ... Burn In" << endl;
+				simulator[energy_level].BurnIn(r, storage, simulation_length, parameter.multiple_try_mh);
+				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level);
+				int done=1; 
+				MPI_Send(&done, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); 
+			}
+			else if (status.MPI_TAG == 2)
+			{ // tuning
+				// always use mode as the starting state for tuning
+				CSampleIDWeight mode;
+                        	target->GetMode(mode, 0);
+                        	simulator[energy_level].Initialize(mode);
+				
+				cout << energy_level << " ... Tune/Estimate MH Proposal Scales" << endl; 
+				simulator[energy_level].MH_StepSize_Tune(parameter.mh_tracking_length, parameter.mh_stepsize_tuning_max_time, r, parameter.multiple_try_mh);  
 			
-			sPackage[0] = simulator[energy_level].GetMinEnergy(0) < parameter.h0 ? simulator[energy_level].GetMinEnergy(0) : parameter.h0; 
-			sPackage[1] = simulator[energy_level].GetMaxEnergy(0)< parameter.hk_1 ? simulator[energy_level].GetMaxEnergy(0) : parameter.hk_1; 
-			delete [] simulator; 
-			MPI_Send(sPackage, 2, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD); 
-		}
-		else if (status.MPI_TAG == 3)
-		{ // run simulation
-			ParseReceivedMessage(rPackage, parameter.GetMHProposalScaleSize()+4, parameter, energy_level, simulation_length); 
+				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
+				sPackage[0] = (double)(energy_level);
+				parameter.GetMHProposalScale(energy_level, sPackage+1, parameter.GetMHProposalScaleSize());
+				MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD); 
+			}
+			else if (status.MPI_TAG == 3)
+			{
+				// restore storage
+				if (energy_level < parameter.number_energy_level -1)
+					storage.restore(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1));
+				storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 
-                        CEES_Node *simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r);
-			storage.restore(); 
-			InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target);
-			cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 
-			// Simulation
-                       	simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
+				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target); 
 
-			storage.finalize(); 
-			WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
+				cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 	
+				simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
+				
+				// finalize 
+				storage.finalize(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
+				
+				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
+				sPackage[0] = simulator[energy_level].GetMinEnergy(0) < parameter.h0 ? simulator[energy_level].GetMinEnergy(0) : parameter.h0; 
+				sPackage[1] = simulator[energy_level].GetMaxEnergy(0)< parameter.hk_1 ? simulator[energy_level].GetMaxEnergy(0) : parameter.hk_1; 
+				MPI_Send(sPackage, 2, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD); 
+			}
+			else if (status.MPI_TAG == 4)
+			{
+				// restore storage
+				if (energy_level < parameter.number_energy_level -1)
+					storage.restore(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1));
+				storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
+				
+				InitializeSimulator(simulator[energy_level], energy_level, parameter, filename_base, storage, r, target);
+				cout << energy_level << " ... Simulating for ... " << simulation_length << " steps.\n"; 
+                       		simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
+
+				// finalize storage
+				storage.finalize(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
+				
+				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
+				int done = 1; 
+				MPI_Send(&done, 1, MPI_INT, 0, 4, MPI_COMM_WORLD); 
+			}
 			delete [] simulator; 
-			// Send back message
-			int done = 1; 
-			MPI_Send(&done, 1, MPI_INT, 0, 3, MPI_COMM_WORLD); 
 		}
 		else 
 		{
@@ -182,14 +197,9 @@ void InitializeSimulator(CEES_Node &simulator, int energy_level, CParameterPacka
         convert << parameter.run_id << "/" << parameter.run_id << ".current_state."  << energy_level;
         string filename = filename_base + convert.str();
         
-	if (parameter.LoadCurrentStateFromFile(filename, energy_level) || parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
-		simulator.Initialize(parameter.GetCurrentState(energy_level));
-	else
-        {
-        	CSampleIDWeight mode;
-                target->GetMode(mode, 0);
-                simulator.Initialize(mode);           
-        }
+	if (!parameter.LoadCurrentStateFromFile(filename, energy_level))
+		parameter.LoadCurrentStateFromStorage(storage, r, energy_level);
+	simulator.Initialize(parameter.GetCurrentState(energy_level));
 	return; 
 }
 
