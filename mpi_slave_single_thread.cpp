@@ -109,6 +109,10 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
                        		simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
 
 				// finalize storage
+				/*int nX=0; 
+				while (nX==0)
+					nX=0; */
+
 				storage.finalize(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 				
 				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
@@ -197,9 +201,15 @@ void InitializeSimulator(CEES_Node &simulator, int energy_level, CParameterPacka
         string filename = filename_base + convert.str();
         
 	//if (!parameter.LoadCurrentStateFromFile(filename, energy_level))
-	if (!parameter.LoadCurrentStateFromStorage(storage, r, energy_level)) 
-		parameter.LoadCurrentStateFromFile(filename, energy_level);
-	simulator.Initialize(parameter.GetCurrentState(energy_level));
+	if (parameter.LoadCurrentStateFromStorage(storage, r, energy_level) || parameter.LoadCurrentStateFromFile(filename, energy_level) )
+		simulator.Initialize(parameter.GetCurrentState(energy_level));
+	else
+	{
+		CSampleIDWeight mode;
+                target->GetMode(mode, 0);
+                simulator.Initialize(mode);
+	}
+		
 	return; 
 }
 

@@ -62,6 +62,13 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 		string file_name = storage_filename_base + convert.str(); 
 		parameter.SaveParameterToFile(file_name); 
 	}
+
+/*	int nX=0; 
+	while (nX == 0)
+		nX = 0; */
+
+	storage.consolidate(); 
+	
 	// run simulation
 	cout << "Simulation for " << parameter.simulation_length << " steps.\n"; 
 	int total_length = parameter.simulation_length; 
@@ -69,16 +76,16 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 	int nSegment = total_length/segment_length; 
 	for (int i=0; i<nSegment; i++)
 	{
-		storage.consolidate(); 
 		parameter.simulation_length =segment_length; 
 		DispatchSimulation(nTasks, parameter, highest_level); 
+		storage.consolidate(); 
 	}
 	int rSegment = total_length%segment_length; 
 	if (rSegment)
 	{
-		storage.consolidate(); 
 		parameter.simulation_length = rSegment; 
 		DispatchSimulation(nTasks, parameter, highest_level);
+		storage.consolidate(); 
 	}
 		 
 	cout << "Done simulation" << endl; 
