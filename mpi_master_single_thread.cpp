@@ -19,7 +19,8 @@ void DispatchBurnInTask(int nClusterNode, const CParameterPackage &parameter);
 void DispatchTuningTask(int nClusterNode, CParameterPackage &parameter);
 void DispatchTrackingTask(int nClusterNode, CParameterPackage &parameter); 
 void DispatchSimulation(int nClusterNode, const CParameterPackage &parameter, int highest_level); 
- 
+void DispatchSimulation_LevelByLevel(int nClusterNode, const CParameterPackage &parameter, int highest_level);
+
 void master_single_thread(string storage_filename_base, CStorageHead &storage, CParameterPackage &parameter, int highest_level, bool if_resume, CModel *target, const gsl_rng *r) 
 {	
 	/* Find out how many processes there are in the default communicator */
@@ -63,14 +64,9 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 		parameter.SaveParameterToFile(file_name); 
 	}
 
-/*	int nX=0; 
-	while (nX == 0)
-		nX = 0; */
-
-	storage.consolidate(); 
+	cout << "Simulation (level by level) for " << parameter.simulation_length << " steps.\n"; 
 	
-	// run simulation
-	cout << "Simulation for " << parameter.simulation_length << " steps.\n"; 
+	/* run simulation
 	int total_length = parameter.simulation_length; 
 	int segment_length = 10000; 
 	int nSegment = total_length/segment_length; 
@@ -86,13 +82,10 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 		parameter.simulation_length = rSegment; 
 		DispatchSimulation(nTasks, parameter, highest_level);
 		storage.consolidate(); 
-	}
+	}*/
+	DispatchSimulation_LevelByLevel(nTasks, parameter, highest_level); 	
 		 
 	cout << "Done simulation" << endl; 
-
-	/*int xloop = 0; 
-	while (xloop == 0)
-		xloop = 0; */
 
 	// Save summary file 
 	parameter.number_cluster_node = nTasks;

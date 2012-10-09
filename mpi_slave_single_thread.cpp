@@ -58,7 +58,7 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 				
 				// cout << energy_level << " ... Burn In" << endl;
 				simulator[energy_level].BurnIn(r, storage, simulation_length, parameter.multiple_try_mh);
-				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level);
+				// WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level);
 				int done=1; 
 				MPI_Send(&done, 1, MPI_INT, 0, 1, MPI_COMM_WORLD); 
 			}
@@ -72,7 +72,7 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 				// cout << energy_level << " ... Tune/Estimate MH Proposal Scales" << endl; 
 				simulator[energy_level].MH_StepSize_Tune(parameter.mh_tracking_length, parameter.mh_stepsize_tuning_max_time, r, parameter.multiple_try_mh);  
 			
-				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
+				// WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
 				sPackage[0] = (double)(energy_level);
 				parameter.GetMHProposalScale(energy_level, sPackage+1, parameter.GetMHProposalScaleSize());
 				MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD); 
@@ -91,8 +91,8 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 				
 				// finalize 
 				storage.finalize(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
-				
-				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
+				// storage.consolidate(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 	
+				// WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 
 				sPackage[0] = simulator[energy_level].GetMinEnergy(0) < parameter.h0 ? simulator[energy_level].GetMinEnergy(0) : parameter.h0; 
 				sPackage[1] = simulator[energy_level].GetMaxEnergy(0)< parameter.hk_1 ? simulator[energy_level].GetMaxEnergy(0) : parameter.hk_1; 
 				MPI_Send(sPackage, 2, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD); 
@@ -109,13 +109,12 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
                        		simulator[energy_level].Simulate(r, storage, simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
 
 				// finalize storage
-				/*int nX=0; 
-				while (nX==0)
-					nX=0; */
-
 				storage.finalize(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
+			
+				// conslidation is done here for level by level	
+				storage.consolidate(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 	
 				
-				WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
+				// WrapUpSimulation(parameter, simulator[energy_level], filename_base, energy_level); 			
 				int done = 1; 
 				MPI_Send(&done, 1, MPI_INT, 0, 4, MPI_COMM_WORLD); 
 			}
@@ -195,13 +194,13 @@ void ParseReceivedMessage(double *rPackage, int package_size, CParameterPackage 
 
 void InitializeSimulator(CEES_Node &simulator, int energy_level, CParameterPackage &parameter, string filename_base,  CStorageHead &storage, const gsl_rng *r, CModel *target)
 {
-	stringstream convert;
+	/*stringstream convert;
         convert.str(string());
         convert << parameter.run_id << "/" << parameter.run_id << ".current_state."  << energy_level;
-        string filename = filename_base + convert.str();
+        string filename = filename_base + convert.str();*/
         
 	//if (!parameter.LoadCurrentStateFromFile(filename, energy_level))
-	if (parameter.LoadCurrentStateFromStorage(storage, r, energy_level) || parameter.LoadCurrentStateFromFile(filename, energy_level) )
+	if (parameter.LoadCurrentStateFromStorage(storage, r, energy_level)) // || parameter.LoadCurrentStateFromFile(filename, energy_level) )
 		simulator.Initialize(parameter.GetCurrentState(energy_level));
 	else
 	{
