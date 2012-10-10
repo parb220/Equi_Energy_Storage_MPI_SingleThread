@@ -24,7 +24,7 @@ void DispatchBurnInTask(int nTasks, const CParameterPackage &parameter)
 	// sPackage[3] max energy
 	// sPackage[4..end] old proposal scales
 	
-	int rMessage; 
+	int rMessage;
 
 	if (nTasks-1 >= parameter.number_energy_level)
         {
@@ -71,5 +71,5 @@ void DispatchBurnInTask(int nTasks, const CParameterPackage &parameter)
 				MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 1, MPI_COMM_WORLD, &status);
 		}
         }
-	delete [] sPackage; 
+	delete [] sPackage;
 }

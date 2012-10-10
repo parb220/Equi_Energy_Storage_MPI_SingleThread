@@ -37,9 +37,11 @@ void DispatchTrackingTask(int nTasks, CParameterPackage &parameter)
 		}
 		for (int rank=1; rank<nTasks; rank++)
 		{
-			MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
-			h0 = h0 < rPackage[0] ? h0 : rPackage[0]; 
-			hk_1 = hk_1 > rPackage[1] ? hk_1 : rPackage[1]; 
+			MPI_Recv(rPackage, 3, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
+			int rLevel = (int)(rPackage[0]); 
+			h0 = h0 < rPackage[1] ? h0 : rPackage[1]; 
+			if (rLevel == parameter.number_energy_level-1)
+				hk_1 = hk_1 <  rPackage[2] ? hk_1 : rPackage[2]; 
 		}
 	} else 
 	{	/* need to recycle using slave_nodes to run through all energy levels */ 
@@ -57,12 +59,15 @@ void DispatchTrackingTask(int nTasks, CParameterPackage &parameter)
 		}	
 		while (level >= 0)
 		{
-			MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
+			MPI_Recv(rPackage, 3, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
 			rank = status.MPI_SOURCE; 
 			send_receive[rank] = false; 
 
-			h0 = h0 < rPackage[0] ? h0 : rPackage[0]; 
-                        hk_1 = hk_1 > rPackage[1] ? hk_1 : rPackage[1];
+			int rLevel = (int)(rPackage[0]); 
+			h0 = h0 < rPackage[1] ? h0 : rPackage[1]; 
+			if (rLevel == parameter.number_energy_level-1)
+                        	hk_1 = hk_1 < rPackage[2] ? hk_1 : rPackage[2];
+			
 			sPackage[1] = (double)(level);    // energy level
 			sPackage[2] = h0; 
 			sPackage[3] = hk_1; 
@@ -75,21 +80,16 @@ void DispatchTrackingTask(int nTasks, CParameterPackage &parameter)
 		{
 			if (send_receive[rank])
 			{
-				MPI_Recv(rPackage, 2, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
-				h0 = h0 < rPackage[0] ? h0 : rPackage[0]; 
-				hk_1 = hk_1 > rPackage[1] ? hk_1 : rPackage[1]; 
+				MPI_Recv(rPackage, 3, MPI_DOUBLE, MPI_ANY_SOURCE, 3, MPI_COMM_WORLD, &status); 
+				int rLevel = (int)(rPackage[0]); 	
+				h0 = h0 < rPackage[1] ? h0 : rPackage[1]; 
+				if (rLevel == parameter.number_energy_level-1)
+					hk_1 = hk_1 < rPackage[2] ? hk_1 : rPackage[2]; 
 			} 	
 		} 
 	}
-	double new_h0 = h0 < parameter.h0 ? h0 : parameter.h0;
-	double new_hk_1 = hk_1 < parameter.hk_1 ? hk_1 : parameter.hk_1; 
-	if (new_h0 < parameter.h0 || new_hk_1 > parameter.hk_1)
-	{
-		parameter.h0 = new_h0; 
-		parameter.hk_1 = new_hk_1; 
-		parameter.SetEnergyBound(); 
-		parameter.SetTemperature(); 
-	}
+	parameter.h0 = h0 < parameter.h0 ? h0 : parameter.h0;
+	parameter.hk_1 = hk_1 < parameter.hk_1 ? hk_1 : parameter.hk_1; 
 	
 	delete [] rPackage; 
 	delete [] sPackage; 

@@ -1,12 +1,13 @@
 #include <mpi.h>
 #include <cmath>
 #include "CParameterPackage.h"
+#include "CStorageHead.h"
 
 using namespace std; 
 
 /* WORKTAG: 3 run simulation */
 
-void DispatchSimulation_LevelByLevel(int nTasks, const CParameterPackage &parameter, int highest_level)
+void DispatchSimulation_LevelByLevel(int nTasks, const CParameterPackage &parameter, int highest_level, CStorageHead &storage)
 {
 	double *sPackage = new double [parameter.GetMHProposalScaleSize()+4]; 
 	// sPackage[0]: simulation length
@@ -19,18 +20,22 @@ void DispatchSimulation_LevelByLevel(int nTasks, const CParameterPackage &parame
 	sPackage[2] = parameter.h0; 
 	sPackage[3] = parameter.hk_1; 
 
-	int rMessage; 
+	double *rMessage = new double[3];  	
 	MPI_Status status; 
 
-	for (int level =parameter.number_energy_level-1; level>=0; level--)
+	for (int level =highest_level; level>=0; level--)
 	{
-		cout << "level: " << level << " simulation for " << sPackage[0]*(nTasks-1) << endl; 
+		cout << "level: " << level << " simulation for " << (int)(sPackage[0])*(nTasks-1) << endl; 
 		sPackage[1] = (double)(level);
                	parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize());
 		for (int rank=1; rank<nTasks; rank++)
 			MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 4, MPI_COMM_WORLD);
 		for (int rank=1; rank<nTasks; rank++)
-			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, 4, MPI_COMM_WORLD, &status);
+			MPI_Recv(rMessage, 3, MPI_DOUBLE, MPI_ANY_SOURCE, 4, MPI_COMM_WORLD, &status);
+		
+		int binStart = (int)(rMessage[1]); 
+		int binEnd = (int)(rMessage[2]); 
+		storage.consolidate(binStart, binEnd); 
 	}
 
 	delete [] sPackage; 
