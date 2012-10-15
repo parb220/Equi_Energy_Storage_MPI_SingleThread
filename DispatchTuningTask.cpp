@@ -1,47 +1,40 @@
 #include <mpi.h>
+#include "mpi_parameter.h"
 #include "CParameterPackage.h"
 
 using namespace std;  
 
-/* WORKTAG: 
- 1: burn-in
- 2: tuning */
 void DispatchTuningTask(int nTasks, CParameterPackage &parameter)
 {
 	/* Let a number (number_energy_level) of nodes run tuning (scale of proposal 
  	* distribution), and send the scales back */
 	MPI_Status status;
 	int rank;
-	/* scale [0]: level id
- 	   scale [1..end]: scale */
-	double *sPackage = new double [parameter.GetMHProposalScaleSize()+4]; 
-	sPackage[0] = 0;  
-	sPackage[2] = parameter.h0; 
-	sPackage[3] = parameter.hk_1; 
-	// sPackage[0] unused
-	// sPackage[1] energy level
-	// sPackage[2] min energy
-	// sPackage[3] max energy
-	// sPackage[4..end] old proposal scales
+	const int scale_size = parameter.GetMHProposalScaleSize(); 
+	const int state_size = parameter.data_dimension; 
 
-        double *rPackage = new double [parameter.GetMHProposalScaleSize()+1];
+	double *sPackage = new double [scale_size+state_size+N_MESSAGE]; 
+	sPackage[LENGTH_INDEX] = 0;  
+	sPackage[H0_INDEX] = parameter.h0; 
+
+        double *rPackage = new double [scale_size+1];
 	// rPackage[0] energy_level
 	// rPackage[1..end] new proposal scales
 
 	if (nTasks-1 >= parameter.number_energy_level)
         {
         	/* only need a number (number_energy_level) for burn-in */
-        	for (int i=0; i<parameter.number_energy_level; i++)
+        	for (int level=0; level<parameter.number_energy_level; level++)
         	{
-        		sPackage[1] = (double)(i);
-			parameter.GetMHProposalScale(i, sPackage+4, parameter.GetMHProposalScaleSize()); 
-        		rank = i+1;
-        		MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 2, MPI_COMM_WORLD);
+        		sPackage[LEVEL_INDEX] = (double)(level);
+			parameter.GetMHProposalScale(level, sPackage+SCALE_INDEX, scale_size); 
+        		rank = level+1;
+        		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, TUNE_TAG, MPI_COMM_WORLD);
         	}
-       		for (int i=0; i<parameter.number_energy_level; i++)
+       		for (int level=0; level<parameter.number_energy_level; level++)
        		{
-       			MPI_Recv(rPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status);  
-       			parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, parameter.GetMHProposalScaleSize());
+       			MPI_Recv(rPackage, scale_size+1, MPI_DOUBLE, MPI_ANY_SOURCE, TUNE_TAG, MPI_COMM_WORLD, &status);  
+       			parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, scale_size);
        		}
 	}
 	else
@@ -50,34 +43,28 @@ void DispatchTuningTask(int nTasks, CParameterPackage &parameter)
  		 * need to recycle using slave_nodes */
         	int level = parameter.number_energy_level-1;
 		// maintaining a list flagging send/receive status (t/f)
-		vector <bool> send_receive(nTasks); 
         	for (rank=1; rank<nTasks; rank++)
         	{
-			sPackage[1] = (double)(level); 
-			parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize()); 
-        		MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 2, MPI_COMM_WORLD);
-			send_receive[rank] = true; 
+			sPackage[LEVEL_INDEX] = (double)(level); 
+			parameter.GetMHProposalScale(level, sPackage+SCALE_INDEX, scale_size); 
+        		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, TUNE_TAG, MPI_COMM_WORLD);
         		level --;
         	}
         	while (level >= 0)
         	{
-        		MPI_Recv(rPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status);
+        		MPI_Recv(rPackage, scale_size+1, MPI_DOUBLE, MPI_ANY_SOURCE, TUNE_TAG, MPI_COMM_WORLD, &status);
         		rank = status.MPI_SOURCE;
-			send_receive[rank] = false; 
-        		parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, parameter.GetMHProposalScaleSize());
-			sPackage[1] = (double)(level); 
-			parameter.GetMHProposalScale(level, sPackage+4, parameter.GetMHProposalScaleSize());
-        		MPI_Send(sPackage, parameter.GetMHProposalScaleSize()+4, MPI_DOUBLE, rank, 2, MPI_COMM_WORLD);
-			send_receive[rank] = true; 
+        		parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, scale_size);
+			
+			sPackage[LEVEL_INDEX] = (double)(level); 
+			parameter.GetMHProposalScale(level, sPackage+SCALE_INDEX, scale_size);
+        		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, TUNE_TAG, MPI_COMM_WORLD);
         		level --;
         	}
 		for (rank=1; rank<nTasks; rank++)
 		{
-			if (send_receive[rank]) 
-			{
-				MPI_Recv(rPackage, parameter.GetMHProposalScaleSize()+1, MPI_DOUBLE, MPI_ANY_SOURCE, 2, MPI_COMM_WORLD, &status);
-                        	parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, parameter.GetMHProposalScaleSize());
-			}
+			MPI_Recv(rPackage, scale_size+1, MPI_DOUBLE, MPI_ANY_SOURCE, TUNE_TAG, MPI_COMM_WORLD, &status);
+                       	parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, scale_size);
 		}
         }
 	delete [] sPackage; 

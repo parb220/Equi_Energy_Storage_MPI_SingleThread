@@ -66,7 +66,7 @@ int main(int argc, char ** argv)
 	gsl_rng_env_setup(); 
 	T = gsl_rng_default; 
 	r = gsl_rng_alloc(T); 
-	gsl_rng_set(r, (unsigned)time(NULL)); 	
+	gsl_rng_set(r, (unsigned)time(NULL)+my_rank); 	
 	
 	/* default setting; 	*/
         string target_filename_base = string("../equi_energy_generic/gaussian_mixture_model.");

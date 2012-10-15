@@ -15,35 +15,31 @@ SINGLE_CORE_VERSION_OBJS = $(SINGLE_CORE_VERSION_DIR)/CEES_Node.o $(SINGLE_CORE_
 
 all:  test_GMM_mpi
 
-test_GMM_mpi_obj = test_GMM_mpi.o mpi_master_single_thread.o  mpi_slave_single_thread.o DispatchBurnInTask.o DispatchTuningTask.o DispatchTrackingTask.o DispatchSimulationTask_LevelByLevel.o DispatchTrackingTask_LevelByLevel.o $(SINGLE_CORE_VERSION_OBJS) $(DISTR_MODEL_OBJS)
+test_GMM_mpi_obj = test_GMM_mpi.o mpi_master_single_thread.o  mpi_slave_single_thread.o DispatchBurnInTask.o DispatchTuningTask.o DispatchSimulationTask_LevelByLevel.o DispatchTrackingTask_LevelByLevel.o $(SINGLE_CORE_VERSION_OBJS) $(DISTR_MODEL_OBJS)
 
 test_GMM_mpi: $(test_GMM_mpi_obj)
 	$(MPICXX) $(CFLAGS) $(LIBS_DIR) $(LIBS) $(test_GMM_mpi_obj) -o test_GMM_mpi 
 
-test_GMM_mpi.o: test_GMM_mpi.cpp
+test_GMM_mpi.o: test_GMM_mpi.cpp 
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c test_GMM_mpi.cpp 
 
-mpi_master_single_thread.o: mpi_master_single_thread.cpp
+mpi_master_single_thread.o: mpi_master_single_thread.cpp mpi_parameter.h
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c mpi_master_single_thread.cpp
 
-mpi_slave_single_thread.o: mpi_slave_single_thread.cpp
+mpi_slave_single_thread.o: mpi_slave_single_thread.cpp mpi_parameter.h
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c mpi_slave_single_thread.cpp
 
-DispatchBurnInTask.o: DispatchBurnInTask.cpp
+DispatchBurnInTask.o: DispatchBurnInTask.cpp mpi_parameter.h
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchBurnInTask.cpp
 
-DispatchTuningTask.o: DispatchTuningTask.cpp
+DispatchTuningTask.o: DispatchTuningTask.cpp mpi_parameter.h
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchTuningTask.cpp
 
-DispatchSimulationTask_LevelByLevel.o: DispatchSimulationTask_LevelByLevel.cpp
+DispatchSimulationTask_LevelByLevel.o: DispatchSimulationTask_LevelByLevel.cpp mpi_parameter.h
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchSimulationTask_LevelByLevel.cpp
 
-DispatchTrackingTask.o: DispatchTrackingTask.cpp
-	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchTrackingTask.cpp
-
-DispatchTrackingTask_LevelByLevel.o: DispatchTrackingTask_LevelByLevel.cpp
+DispatchTrackingTask_LevelByLevel.o: DispatchTrackingTask_LevelByLevel.cpp mpi_parameter.h
 	$(MPICXX) $(CFLAGS) $(INCLUDE_DIR) -c DispatchTrackingTask_LevelByLevel.cpp
-
 
 clean: 
 	rm -f *.o  test_GMM_mpi 
