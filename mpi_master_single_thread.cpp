@@ -27,10 +27,6 @@ void master_single_thread(string storage_filename_base, CStorageHead &storage, C
 	MPI_Comm_size(MPI_COMM_WORLD, &nTasks); 
 	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank); 
 
-	int nX=0; 
-	while (nX == 0)
-		nX=0;
-
 	if(!if_resume)
 	{
 		storage.makedir(); 	

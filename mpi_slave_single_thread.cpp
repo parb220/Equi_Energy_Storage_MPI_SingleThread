@@ -94,7 +94,6 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			energy_level = GetLengthLevelH0(rPackage, scale_size+state_size+N_MESSAGE, parameter);
 			GetMHScale(rPackage, scale_size+state_size+N_MESSAGE, parameter, energy_level);
 			simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r); 
-
 			// restore partial storage of higher level for fetching but no updating
 			if (energy_level < parameter.number_energy_level-1)
 				storage.RestoreForFetch(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1)); 
@@ -102,21 +101,25 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 			if (my_rank == 1)
 			{
-				// Get current state from storage
-				if (parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
-                               		simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
-               			// Or from target distribution model 
-				else
-                                {
+				if (energy_level == parameter.number_energy_level-1 && !parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
+				{
                                 	CSampleIDWeight mode;
 					target->GetMode(mode, 0);
                                        	simulator[energy_level].Initialize(mode);
-                               	} 
+				}
+				else 
+				{
+					if (parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
+                               			simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
+					else 
+						cerr << "Error in initializing " << energy_level << " " << my_rank << endl; 
+				}
 			}
 			else 
 			{
-				// Get current state from rPackage
-				GetCurrentState(rPackage, scale_size+state_size+N_MESSAGE, parameter, energy_level); 
+				if (!parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
+					// Get current state from rPackage
+					GetCurrentState(rPackage, scale_size+state_size+N_MESSAGE, parameter, energy_level); 
 				simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
 			} 
 
