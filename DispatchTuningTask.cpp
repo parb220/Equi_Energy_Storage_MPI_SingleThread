@@ -50,16 +50,19 @@ void DispatchTuningTask(int nTasks, CParameterPackage &parameter)
         		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, TUNE_TAG, MPI_COMM_WORLD);
         		level --;
         	}
-        	while (level >= 0)
-        	{
-        		MPI_Recv(rPackage, scale_size+1, MPI_DOUBLE, MPI_ANY_SOURCE, TUNE_TAG, MPI_COMM_WORLD, &status);
-        		rank = status.MPI_SOURCE;
-        		parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, scale_size);
+		if (nTasks > 1)
+		{
+        		while (level >= 0)
+        		{
+        			MPI_Recv(rPackage, scale_size+1, MPI_DOUBLE, MPI_ANY_SOURCE, TUNE_TAG, MPI_COMM_WORLD, &status);
+        			rank = status.MPI_SOURCE;
+        			parameter.SetMHProposalScale((int)(rPackage[0]), rPackage+1, scale_size);
 			
-			sPackage[LEVEL_INDEX] = (double)(level); 
-			parameter.GetMHProposalScale(level, sPackage+SCALE_INDEX, scale_size);
-        		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, TUNE_TAG, MPI_COMM_WORLD);
-        		level --;
+				sPackage[LEVEL_INDEX] = (double)(level); 
+				parameter.GetMHProposalScale(level, sPackage+SCALE_INDEX, scale_size);
+        			MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, TUNE_TAG, MPI_COMM_WORLD);
+        			level --;
+			}
         	}
 		for (rank=1; rank<nTasks; rank++)
 		{

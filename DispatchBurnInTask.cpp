@@ -47,14 +47,17 @@ void DispatchBurnInTask(int nTasks, const CParameterPackage &parameter)
         		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, BURN_TAG, MPI_COMM_WORLD);
         		level --;
         	}
-        	while (level >= 0)
-        	{
-        		MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, BURN_TAG, MPI_COMM_WORLD, &status);
+		if (nTasks > 1)
+		{
+        		while (level >= 0)
+        		{
+        			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, BURN_TAG, MPI_COMM_WORLD, &status);
 
-        		rank = status.MPI_SOURCE;
-			sPackage[LEVEL_INDEX] = (double)(level); 
-        		MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, BURN_TAG, MPI_COMM_WORLD);
-        		level --;
+        			rank = status.MPI_SOURCE;
+				sPackage[LEVEL_INDEX] = (double)(level); 
+        			MPI_Send(sPackage, scale_size+state_size+N_MESSAGE, MPI_DOUBLE, rank, BURN_TAG, MPI_COMM_WORLD);
+        			level --;
+			}
         	}
 		for (rank=1; rank<nTasks; rank++)
 			MPI_Recv(&rMessage, 1, MPI_INT, MPI_ANY_SOURCE, BURN_TAG, MPI_COMM_WORLD, &status);

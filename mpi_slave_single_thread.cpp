@@ -60,7 +60,7 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			parameter.SetCurrentState(r, energy_level); 
                        	simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
 			
-			// cout << energy_level << ": " << my_rank << " ... Burn In ... " << parameter.simulation_length << endl;
+			cout << energy_level << ": " << my_rank << " ... Burn In ... " << parameter.simulation_length << endl;
 			simulator[energy_level].BurnIn(r, storage, parameter.simulation_length, parameter.multiple_try_mh);
 			int done=1; 
 			MPI_Send(&done, 1, MPI_INT, 0, BURN_TAG, MPI_COMM_WORLD); 
@@ -77,7 +77,7 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
                        	target->GetMode(mode, 0);
                        	simulator[energy_level].Initialize(mode);
 				
-			// cout << energy_level << ": " << my_rank << " ... Tune MH Proposal Scales" << endl; 
+			cout << energy_level << ": " << my_rank << " ... Tune MH Proposal Scales" << endl; 
 			simulator[energy_level].MH_StepSize_Tune(parameter.mh_tracking_length, parameter.mh_stepsize_tuning_max_time, r, parameter.multiple_try_mh);  
 			
 			// to get the scale of the proposal distributions
@@ -94,6 +94,8 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			energy_level = GetLengthLevelH0(rPackage, scale_size+state_size+N_MESSAGE, parameter);
 			GetMHScale(rPackage, scale_size+state_size+N_MESSAGE, parameter, energy_level);
 			simulator = GenerateSimulator(energy_level, filename_base, storage, parameter, target, r); 
+			cout << energy_level << ": " << my_rank << " tracking for simulating " << parameter.simulation_length << endl; 
+			
 			// restore partial storage of higher level for fetching but no updating
 			if (energy_level < parameter.number_energy_level-1)
 				storage.RestoreForFetch(simulator[energy_level+1].BinID(0), simulator[energy_level+1].BinID(parameter.number_energy_level-1)); 
@@ -101,29 +103,31 @@ void slave_single_thread(string filename_base, CStorageHead &storage, CParameter
 			storage.restore(simulator[energy_level].BinID(0), simulator[energy_level].BinID(parameter.number_energy_level-1)); 
 			if (my_rank == 1)
 			{
-				if (energy_level == parameter.number_energy_level-1 && !parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
-				{
-                                	CSampleIDWeight mode;
-					target->GetMode(mode, 0);
-                                       	simulator[energy_level].Initialize(mode);
+				if (energy_level == parameter.number_energy_level-1 )
+				{ 
+					if (!simulator[energy_level].Initialize(storage, r))
+					{
+                                		CSampleIDWeight mode;
+						target->GetMode(mode, 0);
+                                       		simulator[energy_level].Initialize(mode);
+					}
 				}
 				else 
 				{
-					if (parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
-                               			simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
-					else 
+                               		if(!simulator[energy_level].Initialize(storage, r))
 						cerr << "Error in initializing " << energy_level << " " << my_rank << endl; 
 				}
 			}
 			else 
 			{
-				if (!parameter.LoadCurrentStateFromStorage(storage, r, energy_level))
+				if (!simulator[energy_level].Initialize(storage, r))
+				{
 					// Get current state from rPackage
 					GetCurrentState(rPackage, scale_size+state_size+N_MESSAGE, parameter, energy_level); 
-				simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
+					simulator[energy_level].Initialize(parameter.GetCurrentState(energy_level));
+				}
 			} 
 
-			// cout << energy_level << ": " << my_rank << " tracking for simulating " << parameter.simulation_length << endl; 
 			if (my_rank == nTasks-1)
 				simulator[energy_level].Simulate(r, storage, parameter.simulation_length, parameter.deposit_frequency, parameter.multiple_try_mh);
 			else 
