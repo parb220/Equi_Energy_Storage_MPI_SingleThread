@@ -69,10 +69,10 @@ int main(int argc, char ** argv)
 	gsl_rng_set(r, (unsigned)time(NULL)+my_rank); 	
 	
 	/* default setting; 	*/
-        string target_filename_base = string("../equi_energy_generic/gaussian_mixture_model.");
+        string target_filename_base = string("../model/gaussian_mixture_model.");
 	int _run_id = time(NULL); // by default, use current time as run_id; 
         bool if_resume = false;
-        string storage_filename_base = string("/home/f1hxw01/equal_energy_hw/equi_energy_storage_data/");
+        string storage_filename_base = string("../data/");
         int _data_dimension = DATA_DIMENSION;
         double _pee = PEE;
         double _h_k_1 = HK_1;
